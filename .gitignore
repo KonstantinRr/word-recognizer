@@ -1,7 +1,7 @@
 # Project files
 .vscode/
 build/
-
+*.npy
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
