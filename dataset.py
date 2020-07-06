@@ -2,9 +2,9 @@
 # Neural Networks - UNIVERSITY OF GRONINGEN - 2020 #
 ####################################################
 # Konstantin Rolf - S3750558
-# Kacper - (SNumber)
-# Nicholas - (SNumber)
-# Daniel - (SNumber)
+# Kacper Bielewicz - S3745791
+# Nicholas Koundouros - S3726444
+# Daniel Aboo - S3472183
 
 import argparse
 

@@ -4,6 +4,7 @@ build/
 *.npy
 logs/
 training/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
