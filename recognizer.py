@@ -6,11 +6,14 @@
 # Nicholas - (SNumber)
 # Daniel - (SNumber)
 
-
+import argparse
 import numpy as np
 import cv2
 from sklearn.model_selection import *
 from dataset import *
+import os
+import string
+import datetime
 
 # Tensorflow GPU config
 import tensorflow as tf
@@ -22,6 +25,7 @@ if gpus:
   except RuntimeError as e:
     print(e)
 
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
 from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
 from tensorflow.keras.models import Model
@@ -44,9 +48,11 @@ def createModel(input_shape=(28, 28, 1)):
     x = Conv2D(64, (3, 3), padding="same")(x)
     x = BatchNormalization()(x)
     x = ReLU()(x)
+
     x = Flatten()(x)
     x = Dense(128, activation="relu")(x)
     x = Dense(26, activation="softmax")(x)
+
     model = Model(input_img, x)
     model.compile(Adam(lr=0.001), loss="categorical_crossentropy", metrics=["acc"])
     model.summary()
@@ -81,7 +87,8 @@ def fillImage(img, shape=(28, 28)):
 Splits the source image in different segments containing letters
 Segments are split by vertical lines only. A word is considered as
 a list of horizontal aligned letters.
-Returns a list of split images
+Returns a list of images containing the letters. Letters are stored
+from left to right in the source image.
 """
 def splitSegments(img):
     img = (img * 255).astype("uint8")
@@ -90,12 +97,12 @@ def splitSegments(img):
 
     size_thresh = 1
     intervals = []
-    for i in range(1, n_labels):
-        if stats[i, cv2.CC_STAT_AREA] >= size_thresh:
-            x = stats[i, cv2.CC_STAT_LEFT]
-            y = stats[i, cv2.CC_STAT_TOP]
-            w = stats[i, cv2.CC_STAT_WIDTH]
-            h = stats[i, cv2.CC_STAT_HEIGHT]
+    for k in range(1, n_labels):
+        if stats[k, cv2.CC_STAT_AREA] >= size_thresh:
+            x = stats[k, cv2.CC_STAT_LEFT]
+            y = stats[k, cv2.CC_STAT_TOP]
+            w = stats[k, cv2.CC_STAT_WIDTH]
+            h = stats[k, cv2.CC_STAT_HEIGHT]
             
             addInterval = True
             for i in intervals:
@@ -116,36 +123,88 @@ def splitSegments(img):
             if addInterval:
                 intervals.append([x, x+w])
     intervals = [s for s in intervals if s[1] - s[0] >= 3]
-    for i in intervals:
-        cv2.rectangle(img, (i[0], -1), (i[1], 28), 255, thickness=1)
+    intervals.sort(key=lambda x: x[0])
+    return intervals
 
-    images = [fillImage(img[0:28, i[0]:i[1]]) for i in intervals]    
-    return images
-
-
-def train():
-    data, labels = extract_training_samples('letters')
-    labels = labels - 1
-    
-    labels = to_categorical(labels)
-    xtrain, xtest, ytrain, ytest = train_test_split(data, labels, test_size=0.25)
-    xtrain = np.expand_dims(xtrain, -1)
-    xtest = np.expand_dims(xtest, -1)
-
-    print(labels.shape)
+"""
+Creates and trains the model. It is possible to specify weights
+that are loaded in the beginning and a path where the trained
+weights will be saved
+"""
+def train(epochs, loadWeights=None, saveWeights=None):
+    xtrain, xtest, ytrain, ytest = createTrainingSet()
     
     model = createModel()
-    model.fit(xtrain, ytrain, batch_size=64, epochs=10, validation_data=(xtest, ytest))
+    if loadWeights and loadWeights != '':
+        print('Loading model weights {}'.format(loadWeights))
+        model.load_weights(loadWeights)
+
+    # Create a callback that saves the model's weights
+    checkpoints = []
+    if saveWeights:
+        checkpoint_dir = os.path.dirname(saveWeights)
+        checkpoints.append(ModelCheckpoint(
+            filepath=saveWeights,
+            save_weights_only=True, verbose=1))
+
+    log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+    checkpoints.append(tensorboard_callback)
+
+    model.fit(xtrain, ytrain, batch_size=64,
+        epochs=epochs, validation_data=(xtest, ytest),
+        callbacks=checkpoints)
+    return model
     
-    cv2.namedWindow("Test", cv2.WINDOW_NORMAL)
-    cv2.imshow("Test", data[0])
-    cv2.waitKey(0)
+"""
+Predicts a word inside an image. The function will separate the image
+in single letters and predict them with the help of the model.
+"""
+def predict(loadWeights, img, show=True, boundingBoxes=True):
+    # creates the model and loads the weights
+    model = createModel()
+    model.load_weights(loadWeights)
+
+    # finds the letter segments and creates unified input images
+    intervals = splitSegments(img)
+    images = np.stack([fillImage(img[0:28, i[0]:i[1]]) for i in intervals])
+
+    # Predicts the images
+    result = model.predict(images)
+    letters = np.argmax(result, axis=1)
     
+    word = ''.join([string.ascii_lowercase[i] for i in letters])
+    if show:
+        print('RESULT:', word)
+        if boundingBoxes:
+            for i in intervals:
+                cv2.rectangle(img, (i[0], -1), (i[1], 28), 255, thickness=1)
+        cv2.namedWindow("Train", cv2.WINDOW_NORMAL)
+        cv2.imshow("Train", img)
+        cv2.waitKey(0)
+    return word
 
 if __name__ == '__main__':
-    data, labels = createDataset(length=1, rowSize=1, colSize=8)
-    #cv2.namedWindow("Test", cv2.WINDOW_NORMAL)
-    #cv2.imshow("Test", data[0])
-    #cv2.waitKey(0)
-    splitSegments(data[0])
+    # Instantiate the parser
+    parser = argparse.ArgumentParser(description='Creates a new dataset.')
+    
+    # Required positional argument
+    parser.add_argument('type', type=str, help='Either train or predict.')
+    parser.add_argument('--weights', type=str, help='If the program should load some weights.')
+    parser.add_argument('--save', type=str, default='training/check', help='If the program should load some weights.')
+    parser.add_argument('--epochs', type=int, default=10, help='The amount of epochs that the program should train.')
+    parser.add_argument('--source', type=str, default="source.png", help='The amount of rows in each image')
+
+    args = parser.parse_args()
+    if args.type == 'train':
+        train(args.epochs, loadWeights=args.weights, saveWeights=args.save)
+    elif args.type == 'predict':
+        if args.weights is None:
+            print("You need to specify --weights when predicting images.")
+            exit(0)
+
+        data, labels = createDataset(length=1, rowSize=1, colSize=8)
+        word = predict(args.weights, data[0])
+        print(word)
+    
     #train()
