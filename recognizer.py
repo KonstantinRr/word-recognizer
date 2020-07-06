@@ -8,6 +8,11 @@
 
 
 import numpy as np
+import cv2
+from sklearn.model_selection import *
+from dataset import *
+
+# Tensorflow GPU config
 import tensorflow as tf
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
@@ -16,14 +21,16 @@ if gpus:
       tf.config.experimental.set_memory_growth(gpu, True)
   except RuntimeError as e:
     print(e)
-import cv2
-from sklearn.model_selection import *
+
 from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
 from tensorflow.keras.models import Model
 from tensorflow.keras.utils import to_categorical
-from dataset import *
 
+"""
+Creates the model that is used to analyze a single digit.
+It constructs and compiles a model with the given input shape.
+"""
 def createModel(input_shape=(28, 28, 1)):
     input_img = Input(shape=input_shape)
     x = Conv2D(32, (3, 3), padding="same")(input_img)
@@ -45,17 +52,40 @@ def createModel(input_shape=(28, 28, 1)):
     model.summary()
     return model
 
+"""
+Takes a source image array and converts it to the correct shape.
+The axis is scaled down if it is larger than the target shape.
+Otherwise it is filled up with zeros on both sides.
+"""
 def fillImage(img, shape=(28, 28)):
-    # TODO automatic scaling when larger than 28
-    uneven = img.shape[1] % 2
-    p = (28 - img.shape[1]) // 2
-    img = np.pad(img, ((0, 0), (p, p + uneven)), mode='constant')
+    # Downscaling
+    if img.shape[0] > shape[0]:
+        img = cv2.resize(img, (shape[0], img.shape[1]))
+    if img.shape[1] > shape[1]:
+        img = cv2.resize(img, (img.shape[0], shape[1]))
+    
+    # Padding
+    if img.shape[0] < shape[0]:
+        hUneven = img.shape[0] % 2
+        hPadding = (shape[0] - img.shape[0]) // 2
+        img = np.pad(img, ((hPadding, hPadding + hUneven),
+            (0, 0)), mode='constant')
+    if img.shape[1] < shape[1]:
+        vUneven = img.shape[1] % 2
+        vPadding = (shape[1] - img.shape[1]) // 2
+        img = np.pad(img, ((0, 0),
+            (vPadding, vPadding + vUneven)), mode='constant')
     return img
 
-def splitSegments(img, count=8):
+"""
+Splits the source image in different segments containing letters
+Segments are split by vertical lines only. A word is considered as
+a list of horizontal aligned letters.
+Returns a list of split images
+"""
+def splitSegments(img):
     img = (img * 255).astype("uint8")
-    gray = img #cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    ret, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    ret, thresh = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
     n_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(thresh, connectivity=8)
 
     size_thresh = 1
@@ -89,18 +119,7 @@ def splitSegments(img, count=8):
     for i in intervals:
         cv2.rectangle(img, (i[0], -1), (i[1], 28), 255, thickness=1)
 
-    images = [fillImage(img[0:28, i[0]:i[1]]) for i in intervals]
-    
-    print(intervals)
-    print(img.shape)
-    print(images[0].shape)
-    # image, contours, hier
-    #print(filled.shape)
-    cv2.namedWindow("Test", cv2.WINDOW_NORMAL)
-    cv2.imshow("Test", img)
-    cv2.waitKey(0)
-    #vertLines = np.zeros(data.shape[])
-    
+    images = [fillImage(img[0:28, i[0]:i[1]]) for i in intervals]    
     return images
 
 
