@@ -208,5 +208,3 @@ if __name__ == '__main__':
         data, labels = createDataset(length=1, rowSize=1, colSize=8)
         word = predict(args.weights, data[0])
         print(word)
-    
-    #train()
