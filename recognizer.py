@@ -2,18 +2,20 @@
 # Neural Networks - UNIVERSITY OF GRONINGEN - 2020 #
 ####################################################
 # Konstantin Rolf - S3750558
-# Kacper - (SNumber)
-# Nicholas - (SNumber)
-# Daniel - (SNumber)
+# Kacper - S3745791
+# Nicholas - S3726444
+# Daniel - S3472183
 
 import argparse
-import numpy as np
 import cv2
-from sklearn.model_selection import *
-from dataset import *
 import os
 import string
 import datetime
+
+from sklearn.model_selection import *
+import numpy as np
+
+from dataset import *
 
 # Tensorflow GPU config
 import tensorflow as tf
