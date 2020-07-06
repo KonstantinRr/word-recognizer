@@ -86,22 +86,21 @@ def splitSegments(img, count=8):
             if addInterval:
                 intervals.append([x, x+w])
     intervals = [s for s in intervals if s[1] - s[0] >= 3]
-    #for i in intervals:
-    #    cv2.rectangle(img, (i[0], -1), (i[1], 28), 255, thickness=1)
+    for i in intervals:
+        cv2.rectangle(img, (i[0], -1), (i[1], 28), 255, thickness=1)
 
     images = [fillImage(img[0:28, i[0]:i[1]]) for i in intervals]
-    """
+    
     print(intervals)
     print(img.shape)
     print(images[0].shape)
     # image, contours, hier
-    filled = fillImage(images[0])
-    print(filled.shape)
+    #print(filled.shape)
     cv2.namedWindow("Test", cv2.WINDOW_NORMAL)
-    cv2.imshow("Test", filled)
+    cv2.imshow("Test", img)
     cv2.waitKey(0)
     #vertLines = np.zeros(data.shape[])
-    """
+    
     return images
 
 
@@ -125,6 +124,9 @@ def train():
     
 
 if __name__ == '__main__':
-    #data, labels = createDataset(length=1000, rowSize=1, colSize=1)
-    #splitSegments(data[0])
-    train()
+    data, labels = createDataset(length=1, rowSize=1, colSize=8)
+    #cv2.namedWindow("Test", cv2.WINDOW_NORMAL)
+    #cv2.imshow("Test", data[0])
+    #cv2.waitKey(0)
+    splitSegments(data[0])
+    #train()

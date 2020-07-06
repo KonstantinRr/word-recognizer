@@ -16,20 +16,19 @@ from sklearn.utils import shuffle
 """
 Creates a new matrix of letters with the given rows and columns.
 The dataset gives a list of numpy images with the mnistSize that
-are randomly rearranged into the newly created matrix. Returns
-a tuple containing the image matrix and the label matrix. 
+are rearranged into the newly created matrix. Returns
+a tuple containing the image matrix as well as the label matrix. 
 """
-def createLetterMatrix(dataset, labels, rowSize=8, colSize=8, mnistSize=28):
-    word = Image.new('F', (rowSize * mnistSize, colSize * mnistSize))
-    newLabels = np.zeros(shape=(colSize, rowSize))
-    shuffledData, shuffledLabels = shuffle(dataset, labels)
+def createLetterMatrix(dataset, labels, colSize=8, rowSize=8, mnistSize=28):
+    word = Image.new('F', (colSize * mnistSize, rowSize * mnistSize))
+    newLabels = np.zeros(shape=(rowSize, colSize))
 
     index = 0
-    for x in range(rowSize):
-        for y in range(colSize):
-            pillowImage = Image.fromarray(shuffledData[index])
-            newLabels[y, x] = shuffledLabels[index]
-            word.paste(pillowImage, (x * mnistSize, y * mnistSize))
+    for y in range(colSize):
+        for x in range(rowSize):
+            pillowImage = Image.fromarray(dataset[index])
+            newLabels[x, y] = labels[index]
+            word.paste(pillowImage, (y * mnistSize, x * mnistSize))
             index += 1
 
     return (np.array(word) / 255.0, newLabels - 1)
@@ -38,16 +37,31 @@ def createLetterMatrix(dataset, labels, rowSize=8, colSize=8, mnistSize=28):
 Creates a complete dataset of the given length. Specifies the
 amount of rows and columns that each image should contains.
 """
-def createDataset(length=100, rowSize=8, colSize=8):
+def createDataset(length=100, colSize=8, rowSize=8, initialShuffle=True):
     mnistSize = 28
+    size = rowSize * colSize
     images, labels = extract_training_samples('letters')
+    
+    if initialShuffle:
+        images, labels = shuffle(images, labels)
 
-    dataset = np.zeros(shape=(length, colSize * 28, rowSize * 28))
-    dataLabels = np.zeros(shape=(length, colSize, rowSize))
+    srcIndex = 0
+    dataset = np.zeros(shape=(length, rowSize * mnistSize, colSize * mnistSize))
+    dataLabels = np.zeros(shape=(length, rowSize, colSize))
     for i in range(length):
-        matrix, matrixLabels = createLetterMatrix(images, labels,
+        # Reshuffles if the end of the dataset is reached
+        if (srcIndex+1) * size >= len(images):
+            srcIndex = 0
+            images, labels = shuffle(images, labels)
+        sourceImages = images[srcIndex * size:(srcIndex+1) * size]
+        sourceLables = labels[srcIndex * size:(srcIndex+1) * size]
+        srcIndex += 1
+
+        # Creates the image and label matrix
+        matrixData, matrixLabels = createLetterMatrix(
+            sourceImages, sourceLables,
             rowSize=rowSize, colSize=colSize, mnistSize=mnistSize)
-        dataset[i] = matrix
+        dataset[i] = matrixData
         dataLabels[i] = matrixLabels
 
     return (dataset, dataLabels)
