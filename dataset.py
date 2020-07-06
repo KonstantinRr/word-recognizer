@@ -11,6 +11,7 @@ import numpy as np
 from emnist import extract_training_samples
 import random
 from PIL import Image
+from sklearn.utils import shuffle
 
 """
 Creates a new matrix of letters with the given rows and columns.
@@ -20,16 +21,18 @@ a tuple containing the image matrix and the label matrix.
 """
 def createLetterMatrix(dataset, labels, rowSize=8, colSize=8, mnistSize=28):
     word = Image.new('F', (rowSize * mnistSize, colSize * mnistSize))
-    newLabels = np.zeros(shape=(rowSize, colSize))
+    newLabels = np.zeros(shape=(colSize, rowSize))
+    shuffledData, shuffledLabels = shuffle(dataset, labels)
 
+    index = 0
     for x in range(rowSize):
         for y in range(colSize):
-            randIndex = random.randrange(len(dataset))
-            pillowImage = Image.fromarray(dataset[randIndex])
-            newLabels[x][y] = labels[randIndex]
+            pillowImage = Image.fromarray(shuffledData[index])
+            newLabels[y, x] = shuffledLabels[index]
             word.paste(pillowImage, (x * mnistSize, y * mnistSize))
+            index += 1
 
-    return (np.array(word), newLabels)
+    return (np.array(word) / 255.0, newLabels - 1)
 
 """
 Creates a complete dataset of the given length. Specifies the
@@ -39,8 +42,8 @@ def createDataset(length=100, rowSize=8, colSize=8):
     mnistSize = 28
     images, labels = extract_training_samples('letters')
 
-    dataset = np.zeros(shape=(length, rowSize * 28, colSize * 28))
-    dataLabels = np.zeros(shape=(length, rowSize, colSize))
+    dataset = np.zeros(shape=(length, colSize * 28, rowSize * 28))
+    dataLabels = np.zeros(shape=(length, colSize, rowSize))
     for i in range(length):
         matrix, matrixLabels = createLetterMatrix(images, labels,
             rowSize=rowSize, colSize=colSize, mnistSize=mnistSize)
