@@ -31,7 +31,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
 from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
 from tensorflow.keras.models import Model
-from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical, plot_model
 
 """
 Creates the model that is used to analyze a single digit.
@@ -56,7 +56,7 @@ def createModel(input_shape=(28, 28, 1)):
     x = Dense(26, activation="softmax")(x)
 
     model = Model(input_img, x)
-    model.compile(Adam(lr=0.001), loss="categorical_crossentropy", metrics=["acc"])
+    model.compile(Adam(lr=0.001), loss=" ", metrics=["acc"])
     model.summary()
     return model
 
@@ -162,7 +162,7 @@ def train(epochs, loadWeights=None, saveWeights=None):
 Predicts a word inside an image. The function will separate the image
 in single letters and predict them with the help of the model.
 """
-def predict(loadWeights, img, show=True, boundingBoxes=True):
+def predict(loadWeights, img, show=True, boundingBoxes=True, save=True):
     # creates the model and loads the weights
     model = createModel()
     model.load_weights(loadWeights)
@@ -180,7 +180,9 @@ def predict(loadWeights, img, show=True, boundingBoxes=True):
         print('RESULT:', word)
         if boundingBoxes:
             for i in intervals:
-                cv2.rectangle(img, (i[0], -1), (i[1], 28), 255, thickness=1)
+                cv2.rectangle(img, (i[0], -1), (i[1], 28), 1, thickness=1)
+        if save:
+            cv2.imwrite('file.png', img * 255)
         cv2.namedWindow("Train", cv2.WINDOW_NORMAL)
         cv2.imshow("Train", img)
         cv2.waitKey(0)
@@ -191,7 +193,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Creates a new dataset.')
     
     # Required positional argument
-    parser.add_argument('type', type=str, help='Either train or predict.')
+    parser.add_argument('type', type=str, help='Either train, predict or plot.')
     parser.add_argument('--weights', type=str, help='If the program should load some weights.')
     parser.add_argument('--save', type=str, default='training/check', help='If the program should load some weights.')
     parser.add_argument('--epochs', type=int, default=10, help='The amount of epochs that the program should train.')
@@ -200,6 +202,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.type == 'train':
         train(args.epochs, loadWeights=args.weights, saveWeights=args.save)
+    elif args.type == 'plot':
+        model = createModel()
+        plot_model(
+            model,
+            to_file="model.png",
+            show_shapes=True,
+            show_layer_names=True,
+            rankdir="TB",
+            expand_nested=True,
+            dpi=300,
+        )
     elif args.type == 'predict':
         if args.weights is None:
             print("You need to specify --weights when predicting images.")
