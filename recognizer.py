@@ -56,7 +56,7 @@ def createModel(input_shape=(28, 28, 1)):
     x = Dense(26, activation="softmax")(x)
 
     model = Model(input_img, x)
-    model.compile(Adam(lr=0.001), loss=" ", metrics=["acc"])
+    model.compile(Adam(lr=0.001), loss="categorical_crossentropy", metrics=["acc"])
     model.summary()
     return model
 
