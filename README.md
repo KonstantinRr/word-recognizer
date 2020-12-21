@@ -1,8 +1,8 @@
 UNIVERSITY OF GRONINGEN - Neural Networks
 
-Konstantin Rolf - S3750558,
-Kacper Bielewicz - S3745791,
-Nicholas Koundouros - S3726444,
+Konstantin Rolf - S3750558,<br/>
+Kacper Bielewicz - S3745791,<br/>
+Nicholas Koundouros - S3726444,<br/>
 Daniel Aboo - S3472183
 
 # Word-Recognizer
