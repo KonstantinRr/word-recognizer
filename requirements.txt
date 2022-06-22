@@ -1,5 +1,5 @@
 tensorflow-gpu==2.2.0
-numpy==1.16.2
+numpy==1.22.0
 emnist==0.0
 opencv-python==4.2.0.34
 Pillow==7.1.1
